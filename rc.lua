@@ -329,7 +329,7 @@ for i = 1, keynumber do
                   function ()
                         for s = 1, screen.count() do
                            if tags[s][i] then
-                             awful.tag.viewonly(tags[screen][i])
+                             awful.tag.viewonly(tags[s][i])
                            end
                         end
                   end),
