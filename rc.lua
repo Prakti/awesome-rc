@@ -10,6 +10,9 @@ local beautiful = require("beautiful")
 -- Notification library
 local naughty = require("naughty")
 local menubar = require("menubar")
+-- Widget libaries
+local vicious = require("vicious")
+
 
 function run_once(prg, args)
   if not prg then
@@ -47,8 +50,11 @@ end
 -- }}}
 
 -- {{{ Variable definitions
+
 -- Themes define colours, icons, and wallpapers
-beautiful.init("/usr/share/awesome/themes/default/theme.lua")
+home = os.getenv("HOME")
+--beautiful.init("/usr/share/awesome/themes/default/theme.lua")
+beautiful.init(home .. "/.config/awesome/themes/multicolor/theme.lua")
 
 -- This is used later as the default terminal and editor to run.
 terminal = "lilyterm"
@@ -63,8 +69,7 @@ editor_cmd = terminal .. " -e " .. editor
 modkey = "Mod4"
 
 -- Start necessary background services
-run_once("nm-applet")
-run_once("dbus-launch tomboy")
+-- run_once("dbus-launch tomboy")
 
 -- Table of layouts to cover with awful.layout.inc, order matters.
 local layouts =
@@ -97,8 +102,8 @@ end
 tags = {}
 for s = 1, screen.count() do
     -- Each screen has its own tag table.
-    tags[s] = awful.tag({"1⇋ Main", "2⇋ Admin.", "3⇋ Web", "4⇋ Comm", 
-                         "5⇋ Media", "6", "7", "8", "9"}, s, layouts[1])
+    tags[s] = awful.tag({"1 ", "2 ", "3 ", "4 ", 
+                         "5 ", "6 ", "7 ", "8 ", "9 "}, s, layouts[1])
 end
 -- }}}
 
@@ -128,7 +133,8 @@ menubar.utils.terminal = terminal -- Set the terminal for applications that requ
 mytextclock = awful.widget.textclock()
 
 -- Create a wibox for each screen and add it
-mywibox = {}
+mytopwibox = {}
+mybotwibox = {}
 mypromptbox = {}
 mylayoutbox = {}
 mytaglist = {}
@@ -193,7 +199,8 @@ for s = 1, screen.count() do
     mytasklist[s] = awful.widget.tasklist(s, awful.widget.tasklist.filter.currenttags, mytasklist.buttons)
 
     -- Create the wibox
-    mywibox[s] = awful.wibox({ position = "top", screen = s })
+    mytopwibox[s] = awful.wibox({ position = "top", screen = s })
+    mybotwibox[s] = awful.wibox({ position = "bottom", screen = s })
 
     -- Widgets that are aligned to the left
     local left_layout = wibox.layout.fixed.horizontal()
@@ -207,13 +214,24 @@ for s = 1, screen.count() do
     right_layout:add(mytextclock)
     right_layout:add(mylayoutbox[s])
 
-    -- Now bring it all together (with the tasklist in the middle)
+    -- Widgets that go in the middle
+    local center_layout = wibox.layout.fixed.horizontal()
+
+    -- TODO: create nice looking widgets for cpu, memory and network
+
+    -- Now create the top widget box
     local layout = wibox.layout.align.horizontal()
     layout:set_left(left_layout)
-    layout:set_middle(mytasklist[s])
+    layout:set_middle(center_layout)
     layout:set_right(right_layout)
 
-    mywibox[s]:set_widget(layout)
+    mytopwibox[s]:set_widget(layout)
+    
+    -- Now create the bottom widget box
+    local layout = wibox.layout.align.horizontal()
+    layout:set_middle(mytasklist[s])
+    
+    mybotwibox[s]:set_widget(layout)
 end
 -- }}}
 
