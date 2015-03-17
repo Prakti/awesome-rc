@@ -24,6 +24,11 @@ function run_once(prg, args)
   awful.util.spawn_with_shell('pgrep -f -u $USER -x ' .. prg .. ' || (' .. prg .. ' ' .. args ..')')
 end
 
+-- Custom function to create <span> tags for vicious with some color definition
+function colorspan(color, text)
+  return '<span color="' .. color .. '">' .. text .. '</span>'
+end
+
 -- {{{ Error handling
 -- Check if awesome encountered an error during startup and fell back to
 -- another config (This code will only ever execute for the fallback config)
@@ -56,10 +61,14 @@ home = os.getenv("HOME")
 --beautiful.init("/usr/share/awesome/themes/default/theme.lua")
 beautiful.init(home .. "/.config/awesome/themes/multicolor/theme.lua")
 
--- This is used later as the default terminal and editor to run.
+ -- Program Preferences
 terminal = "lilyterm"
 editor = os.getenv("EDITOR") or "nano"
 editor_cmd = terminal .. " -e " .. editor
+gui_editor = "gvim"
+browser = "chromium"
+tasks = terminal .. " -e htop"
+musicplr = terminal .. " -s -e ncmpcpp"
 
 -- Default modkey.
 -- Usually, Mod4 is the key with a logo between Control and Alt.
@@ -70,6 +79,8 @@ modkey = "Mod4"
 
 -- Start necessary background services
 -- run_once("dbus-launch tomboy")
+-- run_once("pnmixer")
+run_once("mpd")
 
 -- Table of layouts to cover with awful.layout.inc, order matters.
 local layouts =
@@ -102,7 +113,7 @@ end
 tags = {}
 for s = 1, screen.count() do
     -- Each screen has its own tag table.
-    tags[s] = awful.tag({"1 ", "2 ", "3 ", "4 ", 
+    tags[s] = awful.tag({"1 ", "2 ", "3 ", "4 ",
                          "5 ", "6 ", "7 ", "8 ", "9 "}, s, layouts[1])
 end
 -- }}}
@@ -129,8 +140,76 @@ menubar.utils.terminal = terminal -- Set the terminal for applications that requ
 -- }}}
 
 -- {{{ Wibox
--- Create a textclock widget
-mytextclock = awful.widget.textclock()
+
+decoSpace = wibox.widget.textbox('   ')
+
+-- Clock Widget
+iconClock = wibox.widget.imagebox()
+iconClock:set_image(beautiful.widget_clock)
+
+widgetClock = awful.widget.textclock(colorspan(beautiful.fg_blue, "%a %d %b %H:%M"))
+
+-- MEM widget
+iconMem = wibox.widget.imagebox()
+iconMem:set_image(beautiful.widget_mem)
+
+widgetMem = wibox.widget.textbox()
+vicious.register(widgetMem, vicious.widgets.mem, colorspan(beautiful.fg_yellow, '$1% [$2MB/$3MB]'), 13)
+
+-- CPU widget
+iconCPU = wibox.widget.imagebox()
+iconCPU:set_image(beautiful.widget_cpu)
+iconCPU:buttons(awful.util.table.join(awful.button({ }, 1, function () awful.util.spawn(tasks, false) end)))
+
+widgetCPU = wibox.widget.textbox()
+vicious.register(widgetCPU, vicious.widgets.cpu, colorspan(beautiful.fg_blue, '1%'), 3)
+
+-- Temp widget
+iconTemp = wibox.widget.imagebox()
+iconTemp:set_image(beautiful.widget_temp)
+
+widgetTemp = wibox.widget.textbox()
+vicious.register(widgetTemp, vicious.widgets.thermal, colorspan(beautiful.fg_red, '$1°C'), 9, {"coretemp.0", "core"} )
+
+-- MPD Icon and Widget
+iconMPD = wibox.widget.imagebox()
+iconMPD:set_image(beautiful.widget_music)
+iconMPD:buttons(awful.util.table.join(awful.button({ }, 1, function () awful.util.spawn_with_shell(musicplr) end)))
+
+widgetMPD = wibox.widget.textbox()
+vicious.register(widgetMPD, vicious.widgets.mpd,
+function(widget, args)
+  if (args["{state}"] == "Play") then
+    iconMPD:set_image(beautiful.widget_music_on)
+    text = colorspan(beautiful.fg_red, args["{Title}"])
+    text = text .. colorspan(beautiful.fg_normal, " - ")
+    return text .. colorspan(beautiful.fg_green, args["{Artist}"])
+  elseif (args["{state}"] == "Pause") then
+    iconMPD:set_image(beautiful.widget_music)
+    return colorspan(beautiful.fg_normal, "... paused ...")
+  else
+    iconMPD:set_image(beautiful.widget_music)
+    return ""
+  end
+end, 1)
+
+-- Volume widget
+iconVol = wibox.widget.imagebox()
+iconVol:set_image(beautiful.widget_vol)
+
+widgetVol = wibox.widget.textbox()
+vicious.register(widgetVol, vicious.widgets.volume,
+function (widget, args)
+  if (args[2] ~= "♩" ) then
+    if (args[1] == 0) then iconVol:set_image(beautiful.widget_vol_no)
+    elseif (args[1] <= 50) then iconVol:set_image(beautiful.widget_vol_low)
+    else iconVol:set_image(beautiful.widget_vol)
+    end
+  else iconVol:set_image(beautiful.widget_vol_mute)
+  end
+  return colorspan(beautiful.fg_blue, args[1] .. '%')
+end, 1, "Master")
+
 
 -- Create a wibox for each screen and add it
 mytopwibox = {}
@@ -210,14 +289,43 @@ for s = 1, screen.count() do
 
     -- Widgets that are aligned to the right
     local right_layout = wibox.layout.fixed.horizontal()
-    if s == 1 then right_layout:add(wibox.widget.systray()) end
-    right_layout:add(mytextclock)
+    if s == 1 then
+      right_layout:add(decoSpace)
+      right_layout:add(wibox.widget.systray())
+      right_layout:add(decoSpace)
+    end
+    right_layout:add(iconClock)
+    right_layout:add(widgetClock)
+
+    right_layout:add(decoSpace)
+
     right_layout:add(mylayoutbox[s])
 
     -- Widgets that go in the middle
     local center_layout = wibox.layout.fixed.horizontal()
 
-    -- TODO: create nice looking widgets for cpu, memory and network
+    center_layout:add(iconMPD)
+    center_layout:add(widgetMPD)
+
+    center_layout:add(decoSpace)
+
+    center_layout:add(iconCPU)
+    center_layout:add(widgetCPU)
+
+    center_layout:add(decoSpace)
+
+    center_layout:add(iconMem)
+    center_layout:add(widgetMem)
+
+    center_layout:add(decoSpace)
+
+    center_layout:add(iconTemp)
+    center_layout:add(widgetTemp)
+
+    center_layout:add(decoSpace)
+
+    center_layout:add(iconVol)
+    center_layout:add(widgetVol)
 
     -- Now create the top widget box
     local layout = wibox.layout.align.horizontal()
@@ -226,11 +334,11 @@ for s = 1, screen.count() do
     layout:set_right(right_layout)
 
     mytopwibox[s]:set_widget(layout)
-    
+
     -- Now create the bottom widget box
     local layout = wibox.layout.align.horizontal()
     layout:set_middle(mytasklist[s])
-    
+
     mybotwibox[s]:set_widget(layout)
 end
 -- }}}
@@ -292,7 +400,7 @@ globalkeys = awful.util.table.join(
     awful.key({ modkey, "Control" }, "n", awful.client.restore),
 
     -- Prompt
-    awful.key({ modkey },            "r",     function () mypromptbox[mouse.screen]:run() end),
+    awful.key({ modkey }, "r",     function () mypromptbox[mouse.screen]:run() end),
 
     awful.key({ modkey }, "x",
               function ()
@@ -302,7 +410,14 @@ globalkeys = awful.util.table.join(
                   awful.util.getdir("cache") .. "/history_eval")
               end),
     -- Menubar
-    awful.key({ modkey }, "p", function() menubar.show() end)
+    awful.key({ modkey }, "p", function() menubar.show() end),
+
+    -- Sound control
+    awful.key({ modkey, "Control" }, "Down", function () awful.util.spawn(musicplr, false ) vicious.force({ mpdwidget } ) end),
+    awful.key({ modkey, "Control" }, "Up", function () awful.util.spawn( "mpc toggle", false ) vicious.force({ mpdwidget } ) end),
+    awful.key({ modkey, "Control" }, "Left", function () awful.util.spawn( "mpc prev", false ) vicious.force({ mpdwidget } ) end ),
+    awful.key({ modkey, "Control" }, "Right", function () awful.util.spawn( "mpc next", false ) vicious.force({ mpdwidget } ) end ),
+    awful.key({ modkey, "Control" }, "m", function () awful.util.spawn( "pamixer --toggle-mute", false ) vicious.force({ volumewidget } ) end )
 )
 
 clientkeys = awful.util.table.join(
