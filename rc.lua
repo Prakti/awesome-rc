@@ -417,7 +417,9 @@ globalkeys = awful.util.table.join(
     awful.key({ modkey, "Control" }, "Up", function () awful.util.spawn( "mpc toggle", false ) vicious.force({ mpdwidget } ) end),
     awful.key({ modkey, "Control" }, "Left", function () awful.util.spawn( "mpc prev", false ) vicious.force({ mpdwidget } ) end ),
     awful.key({ modkey, "Control" }, "Right", function () awful.util.spawn( "mpc next", false ) vicious.force({ mpdwidget } ) end ),
-    awful.key({ modkey, "Control" }, "m", function () awful.util.spawn( "pamixer --toggle-mute", false ) vicious.force({ volumewidget } ) end )
+    awful.key({ modkey, "Control" }, "m", function () awful.util.spawn( "pamixer --toggle-mute", false ) vicious.force({ volumewidget } ) end ),
+    awful.key({ modkey, "Shift" }, "Left", function () awful.util.spawn( "mpc volume -1", false ) vicious.force({ mpdwidget } ) end ),
+    awful.key({ modkey, "Shift" }, "Right", function () awful.util.spawn( "mpc volume +1", false ) vicious.force({ mpdwidget } ) end )
 )
 
 clientkeys = awful.util.table.join(
